@@ -62,6 +62,22 @@
             style="opacity: 0; transform: translateY(50px); transition: all 1s ease-in-out;">
             <i class="fas fa-vr-cardboard"></i>
         </button>
+        <select id="visualizerSelect" class="visualizer-select" style="opacity: 0; transform: translateY(50px); transition: all 1s ease-in-out; 
+                   padding: 12px 20px;
+                   background: rgba(255, 255, 255, 0.1);
+                   backdrop-filter: blur(10px);
+                   -webkit-backdrop-filter: blur(10px);
+                   border: 1px solid rgba(255, 255, 255, 0.18);
+                   border-radius: 16px;
+                   color: white;
+                   font-size: 16px;
+                   box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+                   cursor: pointer;
+                   outline: none;">
+            <option value="sphere" style="background: rgba(0, 0, 0, 0.8); padding: 8px;">✨ Sphere Visualizer</option>
+            <option value="cube" style="background: rgba(0, 0, 0, 0.8); padding: 8px;">💠 Cube Visualizer</option>
+            <option value="cone" style="background: rgba(0, 0, 0, 0.8); padding: 8px;">🔺 Cone Visualizer</option>
+        </select>
         <div id="vrNotification" class="vr-notification">No VR Device found!</div>
         <div class="upload-container" style="opacity: 0; transform: translateY(-50px); transition: all 1s ease-in-out;">
             <input type="file" id="audioUpload" accept="audio/*" class="upload-input" />
@@ -77,6 +93,7 @@
         <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
         <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.7.1/gsap.min.js"></script>
         <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+        <script src="https://sdk.scdn.co/spotify-player.js"></script>
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
         <style>
             .project-title {
@@ -121,6 +138,34 @@
             .play-pause-btn:hover {
                 background: rgba(255, 255, 255, 0.2);
                 transform: scale(1.1);
+            }
+
+            .visualizer-select {
+                position: fixed;
+                bottom: 20px;
+                right: 140px;
+                padding: 10px;
+                border-radius: 25px;
+                border: none;
+                background: rgba(255, 255, 255, 0.1);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+                color: white;
+                cursor: pointer;
+                z-index: 1000;
+                font-size: 14px;
+                transition: all 0.3s ease;
+            }
+
+            .visualizer-select:hover {
+                background: rgba(255, 255, 255, 0.2);
+                transform: scale(1.05);
+            }
+
+            .visualizer-select option {
+                background: rgba(0, 0, 0, 0.8);
+                color: white;
             }
 
             .vr-btn {
@@ -180,6 +225,9 @@
                 top: 20px;
                 right: 20px;
                 z-index: 1000;
+                display: flex;
+                flex-direction: column;
+                gap: 10px;
             }
 
             .upload-input {
@@ -404,7 +452,87 @@
             sphere.receiveShadow = true;
             scene.add(sphere);
 
-            // Create frequency visualization points
+            // Create cube visualizer
+            const cubeGeometry = new THREE.BoxGeometry(15, 15, 15);
+            const cubeMaterial = new THREE.MeshPhongMaterial({
+                color: 0xff00ff,
+                wireframe: true,
+                emissive: 0xff00ff,
+                emissiveIntensity: 0.5,
+                shininess: 100
+            });
+            const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+            cube.position.set(0, 0, 0); // Center the cube
+            cube.castShadow = true;
+            cube.receiveShadow = true;
+            cube.visible = false; // Hide cube initially
+            scene.add(cube);
+
+            // Create cone visualizer
+            const coneGeometry = new THREE.ConeGeometry(10, 20, 32);
+            const coneMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffff00,
+                wireframe: true,
+                emissive: 0xffff00,
+                emissiveIntensity: 0.5,
+                shininess: 100
+            });
+            const cone = new THREE.Mesh(coneGeometry, coneMaterial);
+            cone.position.set(0, 0, 0);
+            cone.castShadow = true;
+            cone.receiveShadow = true;
+            cone.visible = false;
+            scene.add(cone);
+
+            // Create cube frequency visualization points
+            const cubeVisualizerPoints = [];
+            const cubePointGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+            const cubePointMaterial = new THREE.MeshPhongMaterial({
+                color: 0xff00ff,
+                emissive: 0xff00ff,
+                emissiveIntensity: 0.5,
+                shininess: 100
+            });
+
+            for (let i = 0; i < 512; i++) {
+                const point = new THREE.Mesh(cubePointGeometry, cubePointMaterial.clone());
+                const phi = Math.random() * Math.PI * 2;
+                const theta = Math.random() * Math.PI;
+                point.basePosition = new THREE.Vector3(
+                    7.5 * Math.sin(theta) * Math.cos(phi),
+                    7.5 * Math.sin(theta) * Math.sin(phi),
+                    7.5 * Math.cos(theta)
+                );
+                point.position.copy(point.basePosition);
+                cubeVisualizerPoints.push(point);
+                cube.add(point);
+            }
+
+            // Create cone frequency visualization points
+            const coneVisualizerPoints = [];
+            const conePointGeometry = new THREE.ConeGeometry(0.25, 0.5, 8);
+            const conePointMaterial = new THREE.MeshPhongMaterial({
+                color: 0xffff00,
+                emissive: 0xffff00,
+                emissiveIntensity: 0.5,
+                shininess: 100
+            });
+
+            for (let i = 0; i < 512; i++) {
+                const point = new THREE.Mesh(conePointGeometry, conePointMaterial.clone());
+                const phi = Math.random() * Math.PI * 2;
+                const theta = Math.random() * Math.PI;
+                point.basePosition = new THREE.Vector3(
+                    10 * Math.sin(theta) * Math.cos(phi),
+                    10 * Math.sin(theta) * Math.sin(phi),
+                    10 * Math.cos(theta)
+                );
+                point.position.copy(point.basePosition);
+                coneVisualizerPoints.push(point);
+                cone.add(point);
+            }
+
+            // Create sphere frequency visualization points
             const visualizerPoints = [];
             const visualizerGeometry = new THREE.SphereGeometry(0.25, 8, 8);
             const visualizerMaterial = new THREE.MeshPhongMaterial({
@@ -429,13 +557,34 @@
             }
 
             camera.position.set(0, 20, 50);
-            camera.lookAt(sphere.position);
+            camera.lookAt(0, 0, 0);
 
             let rotation = 0;
             let scale = 1;
             let heartbeatTime = 0;
             let colorCycle = 0;
             let isPlaying = false;
+
+            // Handle visualizer selection
+            const visualizerSelect = document.getElementById('visualizerSelect');
+
+            function updateVisualizers() {
+                const selectedValue = visualizerSelect.value;
+
+                // Reset positions to center
+                sphere.position.set(0, 0, 0);
+                cube.position.set(0, 0, 0);
+                cone.position.set(0, 0, 0);
+                camera.position.set(0, 20, 50);
+                camera.lookAt(0, 0, 0);
+
+                // Show/hide visualizers based on selection
+                sphere.visible = selectedValue === 'sphere';
+                cube.visible = selectedValue === 'cube';
+                cone.visible = selectedValue === 'cone';
+            }
+
+            visualizerSelect.addEventListener('change', updateVisualizers);
 
             function animate() {
                 requestAnimationFrame(animate);
@@ -447,18 +596,40 @@
 
                 rotation += 0.005;
                 sphere.rotation.y = rotation * 0.5;
+                cube.rotation.y = -rotation * 0.5;
+                cone.rotation.y = rotation * 0.5;
 
                 if (sound.isPlaying && analyser) {
                     const frequencyData = analyser.getFrequencyData();
                     const averageFrequency = frequencyData.reduce((a, b) => a + b) / frequencyData.length;
                     const pulseIntensity = (averageFrequency / 128) * 2.5;
 
-                    // Update sphere color based on beat
+                    // Beat-synced zoom animation
+                    const baseScale = 1;
+                    const zoomScale = baseScale + (pulseIntensity * 0.3); // Adjust multiplier for zoom intensity
+
+                    sphere.scale.set(zoomScale, zoomScale, zoomScale);
+                    cube.scale.set(zoomScale, zoomScale, zoomScale);
+                    cone.scale.set(zoomScale, zoomScale, zoomScale);
+
+                    // Update sphere and cube colors based on beat
                     const sphereHue = (Date.now() * 0.001 + pulseIntensity * 0.2) % 1;
                     const sphereColor = new THREE.Color().setHSL(sphereHue, 0.8, 0.5);
                     sphereMaterial.color = sphereColor;
                     sphereMaterial.emissive = sphereColor;
                     sphereMaterial.emissiveIntensity = 0.5 + pulseIntensity * 0.5;
+
+                    const cubeHue = (sphereHue + 0.5) % 1;
+                    const cubeColor = new THREE.Color().setHSL(cubeHue, 0.8, 0.5);
+                    cubeMaterial.color = cubeColor;
+                    cubeMaterial.emissive = cubeColor;
+                    cubeMaterial.emissiveIntensity = 0.5 + pulseIntensity * 0.5;
+
+                    const coneHue = (sphereHue + 0.33) % 1;
+                    const coneColor = new THREE.Color().setHSL(coneHue, 0.8, 0.5);
+                    coneMaterial.color = coneColor;
+                    coneMaterial.emissive = coneColor;
+                    coneMaterial.emissiveIntensity = 0.5 + pulseIntensity * 0.5;
 
                     // Update sphere visualization
                     visualizerPoints.forEach((point, i) => {
@@ -468,8 +639,35 @@
                         point.position.multiplyScalar(1 + frequency);
                         point.scale.set(scale, scale, scale);
 
-                        // Color based on frequency
                         const hue = (frequency * 0.5 + Date.now() * 0.0001) % 1;
+                        point.material.color.setHSL(hue, 0.8, 0.5);
+                        point.material.emissive.setHSL(hue, 0.8, 0.5);
+                        point.material.emissiveIntensity = frequency * 2;
+                    });
+
+                    // Update cube visualization
+                    cubeVisualizerPoints.forEach((point, i) => {
+                        const frequency = frequencyData[i] / 255;
+                        const scale = 1 + frequency * 2;
+                        point.position.copy(point.basePosition);
+                        point.position.multiplyScalar(1 + frequency);
+                        point.scale.set(scale, scale, scale);
+
+                        const hue = ((frequency * 0.5 + Date.now() * 0.0001) + 0.5) % 1;
+                        point.material.color.setHSL(hue, 0.8, 0.5);
+                        point.material.emissive.setHSL(hue, 0.8, 0.5);
+                        point.material.emissiveIntensity = frequency * 2;
+                    });
+
+                    // Update cone visualization
+                    coneVisualizerPoints.forEach((point, i) => {
+                        const frequency = frequencyData[i] / 255;
+                        const scale = 1 + frequency * 2;
+                        point.position.copy(point.basePosition);
+                        point.position.multiplyScalar(1 + frequency);
+                        point.scale.set(scale, scale, scale);
+
+                        const hue = ((frequency * 0.5 + Date.now() * 0.0001) + 0.33) % 1;
                         point.material.color.setHSL(hue, 0.8, 0.5);
                         point.material.emissive.setHSL(hue, 0.8, 0.5);
                         point.material.emissiveIntensity = frequency * 2;
@@ -484,8 +682,6 @@
                     // Heartbeat animation
                     heartbeatTime += 0.1;
                     const heartbeat = Math.sin(heartbeatTime) * 0.5 + 0.5;
-                    const combinedScale = scale + (heartbeat * 0.1) + (pulseIntensity * 0.2);
-                    sphere.scale.set(combinedScale, combinedScale, combinedScale);
 
                     // Dynamic lighting
                     redLight.intensity = 2 + pulseIntensity + heartbeat;
@@ -527,6 +723,8 @@
                             uploadContainer.style.transform = 'translateY(0)';
                             songInfo.style.opacity = '1';
                             songInfo.style.transform = 'translateX(0)';
+                            visualizerSelect.style.opacity = '1';
+                            visualizerSelect.style.transform = 'translateY(0)';
                         }, 500);
                     }
                 });
